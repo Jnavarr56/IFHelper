@@ -1,15 +1,12 @@
-[submodule "ifhelper-registration-api"]
-	path = ifhelper-registration-api
-	url = git@github.com:Jnavarr56/ifhelper-registration-api.git
 [submodule "registration-api"]
 	path = registration-api
 	url = git@github.com:Jnavarr56/ifhelper-registration-api.git
 [submodule "users-api"]
 	path = users-api
 	url = git@github.com:Jnavarr56/ifhelper-users-api.git
-[submodule "ifhelper-authentication-api"]
-	path = ifhelper-authentication-api
-	url = git@github.com:Jnavarr56/ifhelper-authentication-api.git
 [submodule "authentication-api"]
 	path = authentication-api
 	url = git@github.com:Jnavarr56/ifhelper-authentication-api.git
+[submodule "nginx"]
+	path = nginx
+	url = git@github.com:Jnavarr56/ifhelper-nginx.git

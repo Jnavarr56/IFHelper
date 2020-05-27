@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+    cache: 
+        image: redis
+        container_name: "cache"
+        expose:
+            - "6379"
+    authentication-api:
+        container_name: "authentication-api"
+        build:
+            context: "./authentication-api"
+            dockerfile: "Dockerfile"
+        volumes:
+            - ".:/app"
+            - "/app/authentication-api/node_modules"
+        env_file: 
+            - "./.env"
+        environment:
+            - "PORT=3000"
+            - "REDIS_URL=redis://cache"
+            - "MONGO_DB_URL=${MONGO_DB_URL}"
+            - "GATEWAY_URL=http://server"
+        expose:
+            - "3000"
+        depends_on: 
+            - "cache" 
+    registration-api:
+        container_name: "registration-api"
+        build:
+            context: "./registration-api"
+            dockerfile: "Dockerfile"
+        volumes:
+            - ".:/app"
+            - "/app/registration-api/node_modules"
+        env_file: 
+            - "./.env"
+        environment:
+            - "PORT=3000"
+            - "REDIS_URL=redis://cache"
+            - "MONGO_DB_URL=${MONGO_DB_URL}"
+            - "GATEWAY_URL=http://server"
+        expose:
+            - "3000"
+        depends_on: 
+            - "authentication-api" 
+    users-api:
+        container_name: "users-api"
+        build:
+            context: "./users-api"
+            dockerfile: "Dockerfile"
+        volumes:
+            - ".:/app"
+            - "/app/users-api/node_modules"
+        env_file: 
+            - "./.env"
+        environment:
+            - "PORT=3000"
+            - "REDIS_URL=redis://cache"
+            - "MONGO_DB_URL=${MONGO_DB_URL}"
+            - "GATEWAY_URL=http://server"
+        expose:
+            - "3000"
+        depends_on: 
+            - "registration-api"
+    server: 
+        container_name: "server"
+        build:
+            context: "./nginx"
+            dockerfile: "Dockerfile"
+        volumes:
+            - ".:/app"
+        ports:
+            - "80:80"
+        depends_on:
+            - "users-api"
