@@ -1,62 +1,73 @@
-version: '3.8'
+version: "3.8"
 
 services:
-    cache: 
-        image: redis:latest
-        expose:
-            - "6379"
-    authentication-api:
-        build:
-            context: "./authentication-api"
-            dockerfile: "Dockerfile"
-        volumes:
-            - ".:/app"
-            - "/app/authentication-api/node_modules"
-        env_file: 
-            - ".env"
-        environment:
-            - "NODE_ENV=DEVELOPMENT"
-        expose:
-            - "80"
-        depends_on: 
-            - "cache" 
-    registration-api:
-        build:
-            context: "./registration-api"
-            dockerfile: "Dockerfile"
-        volumes:
-            - ".:/app"
-            - "/app/registration-api/node_modules"
-        env_file: 
-            - ".env"
-        environment:
-            - "NODE_ENV=DEVELOPMENT"
-        expose:
-            - "80"
-        depends_on: 
-            - "authentication-api" 
-    users-api:
-        build:
-            context: "./users-api"
-            dockerfile: "Dockerfile"
-        volumes:
-            - ".:/app"
-            - "/app/users-api/node_modules"
-        env_file: 
-            - ".env"
-        environment:
-            - "NODE_ENV=DEVELOPMENT"
-        expose:
-            - "80"
-        depends_on: 
-            - "registration-api"
-    server: 
-        build:
-            context: "./nginx"
-            dockerfile: "Dockerfile"
-        volumes:
-            - ".:/app"
-        ports:
-            - "80:80"
-        depends_on:
-            - "users-api"
+  rabbitmq-auth:
+    image: "rabbitmq:latest"
+    command: "rabbitmq-server"
+    expose:
+      - "5672"
+      - "15672"
+  redis-auth:
+    image: "redis:latest"
+    expose:
+      - "6379"
+    volumes:
+      - "./wait-for-it.sh:/app/wait-for-it.sh"
+    command: ["/app/wait-for-it.sh", "rabbitmq-auth:5672", "--", "redis-server"]
+    depends_on:
+      - "rabbitmq-auth"
+  authentication-api:
+    build:
+      context: "./authentication-api"
+      dockerfile: "Dockerfile"
+    volumes:
+      - ".:/app"
+      - "/app/authentication-api/node_modules"
+    env_file:
+      - ".env"
+    environment:
+      - "NODE_ENV=DEVELOPMENT"
+    expose:
+      - "80"
+    depends_on:
+      - "redis-auth"
+  registration-api:
+    build:
+      context: "./registration-api"
+      dockerfile: "Dockerfile"
+    volumes:
+      - ".:/app"
+      - "/app/registration-api/node_modules"
+    env_file:
+      - ".env"
+    environment:
+      - "NODE_ENV=DEVELOPMENT"
+    expose:
+      - "80"
+    depends_on:
+      - "authentication-api"
+  users-api:
+    build:
+      context: "./users-api"
+      dockerfile: "Dockerfile"
+    volumes:
+      - ".:/app"
+      - "/app/users-api/node_modules"
+    env_file:
+      - ".env"
+    environment:
+      - "NODE_ENV=DEVELOPMENT"
+    expose:
+      - "80"
+    depends_on:
+      - "registration-api"
+  server:
+    build:
+      context: "./nginx"
+      dockerfile: "Dockerfile"
+    volumes:
+      - ".:/app"
+    ports:
+      - "80:80"
+    depends_on:
+      - "users-api"
