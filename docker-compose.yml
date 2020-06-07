@@ -1,21 +1,29 @@
 version: "3.8"
 
 services:
-  rabbitmq-auth:
+  messenger:
     image: "rabbitmq:latest"
-    command: "rabbitmq-server"
     expose:
       - "5672"
       - "15672"
-  redis-auth:
+  authentication-api-cache:
     image: "redis:latest"
     expose:
       - "6379"
     volumes:
-      - "./wait-for-it.sh:/app/wait-for-it.sh"
-    command: ["/app/wait-for-it.sh", "rabbitmq-auth:5672", "--", "redis-server"]
+      - ".:/app"
+    command: "/app/wait-for-it.sh messenger:5672 -- redis-server --requirepass ${AUTH_CACHE_PASSWORD}"
     depends_on:
-      - "rabbitmq-auth"
+      - "messenger"
+  registration-api-cache:
+    image: "redis:latest"
+    expose:
+      - "6379"
+    volumes:
+      - ".:/app"
+    command: "/app/wait-for-it.sh authentication-api-cache:6379 -- redis-server --requirepass ${REGISTRATION_REDIS_DB_PASSWORD}"
+    depends_on:
+      - "authentication-api-cache"
   authentication-api:
     build:
       context: "./authentication-api"
@@ -23,14 +31,18 @@ services:
     volumes:
       - ".:/app"
       - "/app/authentication-api/node_modules"
-    env_file:
-      - ".env"
     environment:
       - "NODE_ENV=DEVELOPMENT"
+      - "MONGO_DB_URL=${MONGO_DB_URL}"
+      - "JWT_SECRET_KEY=${JWT_SECRET_KEY}"
+      - "AUTH_CACHE_PASSWORD=${AUTH_CACHE_PASSWORD}"
+      - "GOOGLE_OAUTH_SECRET=${GOOGLE_OAUTH_SECRET}"
+      - "GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}"
+      - "GOOGLE_OAUTH_REDIRECT_URL=${GOOGLE_OAUTH_REDIRECT_URL}"
     expose:
       - "80"
     depends_on:
-      - "redis-auth"
+      - "registration-api-cache"
   registration-api:
     build:
       context: "./registration-api"
@@ -38,10 +50,14 @@ services:
     volumes:
       - ".:/app"
       - "/app/registration-api/node_modules"
-    env_file:
-      - ".env"
     environment:
       - "NODE_ENV=DEVELOPMENT"
+      - "MONGO_DB_URL=${MONGO_DB_URL}"
+      - "PASSWORD_RESET_JWT_SECRET_KEY=${PASSWORD_RESET_JWT_SECRET_KEY}"
+      - "EMAIL_CONFIRMATION_JWT_SECRET_KEY=${EMAIL_CONFIRMATION_JWT_SECRET_KEY}"
+      - "REGISTRATION_REDIS_DB_PASSWORD=${REGISTRATION_REDIS_DB_PASSWORD}"
+      - "GMAIL_ADDRESS=${GMAIL_ADDRESS}"
+      - "GMAIL_PASSWORD=${GMAIL_PASSWORD}"
     expose:
       - "80"
     depends_on:
@@ -53,10 +69,9 @@ services:
     volumes:
       - ".:/app"
       - "/app/users-api/node_modules"
-    env_file:
-      - ".env"
     environment:
       - "NODE_ENV=DEVELOPMENT"
+      - "MONGO_DB_URL=${MONGO_DB_URL}"
     expose:
       - "80"
     depends_on:
